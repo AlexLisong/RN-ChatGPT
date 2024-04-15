@@ -44,7 +44,7 @@ To get started with the Chat GPT Clone app, follow these steps:
 1. **Clone the repository:**
 
 ```shell
-git clone https://github.com/bizzara/ChatGPT.git
+git clone [https://github.com/bizzara/ChatGPT.git](https://github.com/AlexLisong/RN-ChatGPT)
 
 cd ChatGPT
 ```
