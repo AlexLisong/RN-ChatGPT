@@ -6,6 +6,7 @@ import { StatusBar } from 'expo-status-bar'
 import { MaterialIcons, FontAwesome, Ionicons } from '@expo/vector-icons'
 import { Bubble, GiftedChat } from 'react-native-gifted-chat'
 import { useTheme } from '../themes/ThemeProvider'
+import { API_KEY } from '@env';
 
 // Thanks for watching...
 const Chat = ({ navigation }) => {
@@ -21,7 +22,7 @@ const Chat = ({ navigation }) => {
     const renderMessage = (props) => {
         const { currentMessage } = props
 
-        if (currentMessage.user._id === 1) {
+        if (currentMessage.user._id === 2) {
             return (
                 <View
                     style={{
@@ -88,106 +89,57 @@ const Chat = ({ navigation }) => {
 
     // Implementing chat generation using gpt-3.5-turbo model
     const generateText = () => {
-        setIsTyping(true)
-        const message = {
-            _id: Math.random().toString(36).substring(7),
-            text: inputMessage,
-            createAt: new Date(),
-            user: { _id: 1 },
+    setIsTyping(true);
+    const userMessage = {
+        _id: Math.random().toString(36).substring(7),
+        text: inputMessage,
+        createdAt: new Date(),
+        user: { _id: 1 },
+    };
+
+    setMessages(previousMessages => GiftedChat.append(previousMessages, [userMessage]));
+
+    fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${API_KEY}`,
+        },
+        body: JSON.stringify({
+            model: 'gpt-3.5-turbo',
+            messages: [{ role: 'user', content: inputMessage }],
+        }),
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.errors) {
+            throw new Error("Failed to generate response.");
         }
-
-        setMessages((previousMessage) =>
-            GiftedChat.append(previousMessage, [message])
-        )
-
-        /**
-         * Always put your api key in an environment file
-         */
-
-        fetch('https://api.openai.com/v1/chat/completions', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                Authorization: 'Bearer your_own_openai_api_key',
-            },
-            body: JSON.stringify({
-                model: 'gpt-3.5-turbo',
-                messages: [
-                    {
-                        role: 'user',
-                        content: inputMessage,
-                    },
-                ],
-            }),
-        })
-            .then((response) => response.json())
-            .then((data) => {
-                console.log(data.choices[0].message.content)
-                setInputMessage('')
-                setOutputMessage(data.choices[0].message.content.trim())
-
-                const message = {
-                    _id: Math.random().toString(36).substring(7),
-                    text: data.choices[0].message.content.trim(),
-                    createAt: new Date(),
-                    user: { _id: 2, name: 'ChatGPT' },
-                }
-
-                setIsTyping(false)
-                setMessages((previousMessage) =>
-                    GiftedChat.append(previousMessage, [message])
-                )
-            })
-    }
-
-    // implementing images generations
-    const generateImages = () => {
-        setIsTyping(true)
-        const message = {
+        const aiResponse = {
             _id: Math.random().toString(36).substring(7),
-            text: inputMessage,
+            text: data.choices[0].message.content.trim(),
             createdAt: new Date(),
-            user: { _id: 1 },
-        }
+            user: { _id: 2, name: 'ChatGPT' },
+        };
 
-        setMessages((previousMessage) =>
-            GiftedChat.append(previousMessage, [message])
-        )
+        setIsTyping(false);
+        setMessages(previousMessages => GiftedChat.append(previousMessages, [aiResponse]));
+        setInputMessage('');
+    })
+    .catch(error => {
+        console.error("API call failed:", error);
+        const errorMessage = {
+            _id: Math.random().toString(36).substring(7),
+            text: "Sorry, an error occurred while processing your request.",
+            createdAt: new Date(),
+            system: true, // You might mark these messages as system messages for styling
+        };
 
-        fetch('https://api.openai.com/v1/images/generations', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                Authorization: 'Bearer your_own_openai_api_key',
-            },
-            body: JSON.stringify({
-                prompt: inputMessage,
-                n: 1,
-                size: '1024x1024',
-            }),
-        })
-            .then((response) => response.json())
-            .then((data) => {
-                console.log(data.data[0].url)
-                setInputMessage('')
-                setOutputMessage(data.data[0].url)
-                setIsTyping(false)
+        setIsTyping(false);
+        setMessages(previousMessages => GiftedChat.append(previousMessages, [errorMessage]));
+    });
+};
 
-                data.data.forEach((item) => {
-                    const message = {
-                        _id: Math.random().toString(36).substring(7),
-                        text: 'Image',
-                        createdAt: new Date(),
-                        user: { _id: 2, name: 'ChatGPT' },
-                        image: item.url,
-                    }
-
-                    setMessages((previousMessage) =>
-                        GiftedChat.append(previousMessage, [message])
-                    )
-                })
-            })
-    }
 
     const submitHandler = () => {
         if (inputMessage.toLowerCase().startsWith('generate image')) {
@@ -252,7 +204,7 @@ const Chat = ({ navigation }) => {
                 <GiftedChat
                     messages={messages}
                     renderInputToolbar={() => {}}
-                    user={{ _id: 1 }}
+                    user={{ _id: 2 }}
                     minInputToolbarHeight={0}
                     renderMessage={renderMessage}
                     isTyping={isTyping}
